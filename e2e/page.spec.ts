@@ -50,9 +50,27 @@ test('pairs with a code and opens the session it was sent to', async ({ page }) 
   await page.getByRole('textbox', { name: 'Code' }).fill(pairingCode().toLowerCase())
   await page.getByRole('button', { name: 'Pair' }).click()
   await expect(page.locator('header .name')).toHaveText('api')
-  await page.getByRole('link', { name: 'Agents' }).click()
+  await page.getByRole('button', { name: 'Agents' }).click()
   for (const name of ['api', 'web', 'docs']) await expect(page.locator('.row .name', { hasText: name })).toBeVisible()
   await expect(page.locator('footer')).toContainText('This device: e2e')
+})
+
+test('goes back to the list as the browser would', async ({ page }) => {
+  await paired(page)
+  // A session opened from a link goes back to the list in its place.
+  await open(page, web)
+  await expect(page.locator('header .name')).toHaveText('web')
+  const entries = await page.evaluate(() => history.length)
+  await page.getByRole('button', { name: 'Agents' }).click()
+  await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible()
+  expect(await page.evaluate(() => history.length)).toBe(entries)
+  // One opened from the list goes back to it, and forward to it again.
+  await page.locator('.row', { hasText: 'api' }).click()
+  await expect(page.locator('header .name')).toHaveText('api')
+  await page.getByRole('button', { name: 'Agents' }).click()
+  await expect(page.getByRole('heading', { name: 'Agents' })).toBeVisible()
+  await page.goForward()
+  await expect(page.locator('header .name')).toHaveText('api')
 })
 
 test("shows a session's turns, and what agents write as Markdown that stays text", async ({ page }) => {

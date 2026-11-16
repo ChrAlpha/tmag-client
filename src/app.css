@@ -102,10 +102,15 @@ header .what {
   min-width: 0;
 }
 .back {
+  border: 0;
+  background: none;
+  color: var(--accent);
   font-size: 30px;
   line-height: 1;
-  text-decoration: none;
-  padding: 0 6px;
+  width: 44px;
+  height: 44px;
+  margin: -6px 0 -6px -10px;
+  padding: 0 0 4px;
 }
 .name {
   font-weight: 600;

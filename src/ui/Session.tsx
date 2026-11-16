@@ -2,7 +2,7 @@ import type { ComponentChildren } from 'preact'
 import { createContext } from 'preact'
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { Prompt, Session as S } from '../contract'
-import { act, loaded, loadScreen, loadTurns, now, screenOf, turnsOf, view } from '../store'
+import { act, back, loaded, loadScreen, loadTurns, now, screenOf, turnsOf, view } from '../store'
 import { ago, can, find, paneOf, place, status, stoppable } from '../view'
 import { cls, explain, outcome } from './explain'
 import { Markdown } from './Markdown'
@@ -28,9 +28,9 @@ export function Session({ id }: { id: string }) {
   return (
     <div class="screen session">
       <header>
-        <a class="back" href="#/" aria-label="Agents">
+        <button class="back" type="button" aria-label="Agents" onClick={back}>
           ‹
-        </a>
+        </button>
         <div class="what">
           <div class="name">{s ? place(s) : 'Session'}</div>
           <div class="meta">

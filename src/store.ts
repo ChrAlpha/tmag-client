@@ -32,6 +32,24 @@ const parse = (hash: string): Route => {
 
 export const route = signal(parse(location.hash))
 
+// Whether the page came to the session it shows from the agents' list, the
+// entry before it in the browser's history.
+let fromList = false
+
+function follow() {
+  const next = parse(location.hash)
+  fromList = next.name === 'session' && route.value.name === 'list'
+  route.value = next
+}
+
+// back returns to the agents' list: the entry the page came from, or one in
+// place of a session opened from a link, so that the browser's own back and a
+// swipe go where the person expects.
+export function back() {
+  if (fromList) history.back()
+  else location.replace('#/')
+}
+
 /** What the watch rebuilt. */
 export const view = signal<View>(empty)
 /** Whether a snapshot arrived: until then, no session is known to be gone. */
@@ -219,9 +237,7 @@ export async function act(action: Action) {
 
 // start follows the route, the watch and the clock while the page is open.
 export function start() {
-  addEventListener('hashchange', () => {
-    route.value = parse(location.hash)
-  })
+  addEventListener('hashchange', follow)
   document.addEventListener('visibilitychange', wake)
   addEventListener('online', wake)
   setInterval(() => {
