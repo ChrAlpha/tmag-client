@@ -39,7 +39,7 @@ export function Session({ id }: { id: string }) {
           ‹
         </button>
         <div class="what">
-          <div class="name">{s ? place(s) : 'Session'}</div>
+          <h1 class="name">{s ? place(s) : 'Session'}</h1>
           <div class="meta">
             {s
               ? [s.agent, status(s), helpers(s), ago(s.since, now.value)].filter(Boolean).join(' · ')
