@@ -257,6 +257,19 @@ test('says when tmag serve is gone, and picks up where it was when it is back', 
   await expect(page.locator('.reply').last()).toHaveText('answered: after the restart', { timeout: 15_000 })
 })
 
+test('says when tmag on the computer is older than the page needs', async ({ page }) => {
+  await paired(page)
+  await page.route(
+    (url) => url.pathname === '/v2/info',
+    (route) => route.fulfill({ json: { schema: 'tmag/http/v2', version: '0.6.0' } }),
+  )
+  await page.goto('/')
+  await expect(page.locator('.row').first()).toBeVisible()
+  await expect(page.locator('.bar')).toHaveText(
+    'tmag 0.6.0 on the computer is older than this page needs. Update it to 0.7.0 or later.',
+  )
+})
+
 test('asks to pair again once the credential is revoked', async ({ page }) => {
   const c = await paired(page)
   await page.goto('/')

@@ -1,4 +1,5 @@
-import { credential, live, problem, route } from '../store'
+import { minimum } from '../contract'
+import { credential, live, outdated, problem, route } from '../store'
 import { Agents } from './Agents'
 import { explain } from './explain'
 import { Pair } from './Pair'
@@ -14,9 +15,18 @@ export function App() {
   )
 }
 
-// Bar says, while the page is paired, that the watch does not deliver, and why.
+// Bar says, while the page is paired, that the watch does not deliver, and
+// why, or that tmag on the computer is too old for the page.
 function Bar() {
-  if (!credential.value || live.value) return null
+  if (!credential.value) return null
+  if (live.value && outdated.value) {
+    return (
+      <div class="bar error" role="status">
+        tmag {outdated.value} on the computer is older than this page needs. Update it to {minimum} or later.
+      </div>
+    )
+  }
+  if (live.value) return null
   const p = problem.value
   return (
     <div class={p ? 'bar error' : 'bar'} role="status">

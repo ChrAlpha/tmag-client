@@ -43,10 +43,11 @@ async function request(path: string, init: RequestInit): Promise<Response> {
 const bearer = (token: string) => ({ Authorization: `Bearer ${token}` })
 const json = { 'Content-Type': 'application/json' }
 
-// get reads a resource (list, inspect, request or read) with its parameters.
+// get reads a resource (info, list, inspect, request or read) with its
+// parameters.
 export async function get<T>(token: string, resource: string, params: Record<string, string | number>): Promise<T> {
   const query = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)]))
-  const res = await request(`/v2/${resource}?${query}`, { headers: bearer(token) })
+  const res = await request(`/v2/${resource}${query.size ? `?${query}` : ''}`, { headers: bearer(token) })
   return res.json()
 }
 

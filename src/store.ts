@@ -6,7 +6,17 @@
 
 import { batch, computed, effect, type Signal, signal } from '@preact/signals'
 import * as api from './api'
-import type { Action, Credential, RequestDoc, ScreenDoc, Turn, TurnsDoc } from './contract'
+import {
+  type Action,
+  type Credential,
+  type InfoDoc,
+  minimum,
+  older,
+  type RequestDoc,
+  type ScreenDoc,
+  type Turn,
+  type TurnsDoc,
+} from './contract'
 import { apply, empty, find, follows, type Sent, sessions, told, unread, type View } from './view'
 
 const stored = 'tmag.credential'
@@ -59,6 +69,8 @@ export const loaded = signal(false)
 export const live = signal(false)
 /** Why it does not. */
 export const problem = signal<Error | null>(null)
+/** The version of tmag on the computer, when it is older than the page needs. */
+export const outdated = signal('')
 /** The time "ago" counts from, a little behind. */
 export const now = signal(Date.now())
 export const blocked = computed(() => sessions(view.value).filter((s) => s.state === 'blocked').length)
@@ -87,6 +99,7 @@ export function forget(why = '') {
     notice.value = why
     view.value = empty
     loaded.value = false
+    outdated.value = ''
     answered.value = new Set()
   })
 }
@@ -133,6 +146,7 @@ async function connect(): Promise<void> {
               live.value = true
               problem.value = null
             })
+            void check()
           }
         },
         onDoc(doc, at) {
@@ -155,6 +169,18 @@ async function connect(): Promise<void> {
   if (ctl.signal.aborted) return connect() // fell quiet, or the page woke: at once
   failures++
   retry = setTimeout(connect, Math.min(15_000, 500 * 2 ** failures))
+}
+
+// check reads which tmag answers, each time the watch starts: the computer
+// may have updated it, or gone back to an older one, meanwhile.
+async function check() {
+  const asked = credential.value
+  try {
+    const { version } = await authorized((t) => api.get<InfoDoc>(t, 'info', {}))
+    if (credential.value === asked) outdated.value = older(version, minimum) ? version : ''
+  } catch {
+    // The watch says why the computer does not answer.
+  }
 }
 
 function stop() {

@@ -3,6 +3,23 @@
 // Architecture and Contracts page are the source; a field either may omit is
 // optional here.
 
+/**
+ * The oldest tmag whose contract the page needs: `read --turns` came in
+ * 0.7.0. README.md and TMAG_REF in .github/workflows/ci.yml name it too.
+ */
+export const minimum = '0.7.0'
+
+// older says whether a tmag version comes before another. A version that
+// does not start with major.minor.patch is no older than any.
+export function older(version: string, than: string): boolean {
+  const parse = (v: string) => /^v?(\d+)\.(\d+)\.(\d+)/.exec(v)?.slice(1).map(Number)
+  const a = parse(version)
+  const b = parse(than)
+  if (!a || !b) return false
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return (a[i] ?? 0) < (b[i] ?? 0)
+  return false
+}
+
 export type State = 'idle' | 'working' | 'blocked'
 
 /** A prompt a session waits on: a permission, a question or a plan. */
@@ -91,6 +108,11 @@ export interface RequestDoc {
   request: Request
   tool?: string
   input?: Record<string, unknown>
+}
+
+/** `GET /v2/info`: the instance tmag serve answers for. */
+export interface InfoDoc {
+  version: string
 }
 
 /** The credential `POST /v2/pair` issues; the page keeps it. */

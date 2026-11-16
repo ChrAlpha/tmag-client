@@ -70,5 +70,6 @@ credentials: `e2e/world.ts` builds its own.
 Commits follow Conventional Commits. Code comments and docs are in English.
 Biome formats and lints; `pnpm format` applies it. The version lives in
 `package.json`, and a `vX.Y.Z` tag that matches it releases the built page.
-README.md's minimum tmag and `TMAG_REF` in `.github/workflows/ci.yml` move
-together. Keep the MIT license and its copyright.
+README.md's minimum tmag, `TMAG_REF` in `.github/workflows/ci.yml` and
+`minimum` in `src/contract.ts` move together; a test keeps them so. Keep the
+MIT license and its copyright.
