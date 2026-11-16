@@ -4,7 +4,7 @@
 // it, and a panes document replaces the panes. tmux-agent-experience's e2e
 // follower keeps the same rules.
 
-import type { Event, Pane, Session, WatchDoc } from './contract'
+import type { Event, Pane, Session, Turn, WatchDoc } from './contract'
 
 export interface View {
   /** Sessions by agent and id: two agents may share an id. */
@@ -102,6 +102,34 @@ export const can = (s: Session, verb: 'send' | 'interrupt' | 'answer') => s.capa
 // one that runs only background tasks.
 export const stoppable = (s: Session) =>
   can(s, 'interrupt') && (s.state === 'blocked' || (s.state === 'working' && s.kind !== 'background'))
+
+/**
+ * A prompt the page sent, until the session's turns show it: how many of
+ * their prompts had its text, and when the session's state began, as it was
+ * sent.
+ */
+export interface Sent {
+  /** Which of the prompts the page sent it is. */
+  id: number
+  text: string
+  seen: number
+  since: string | undefined
+}
+
+// follows says whether the page follows a prompt it sent into the turns: a
+// slash command is the agent's to run, and starts no turn.
+export const follows = (text: string) => !text.trim().startsWith('/')
+
+// told counts the prompts of the turns that have this text.
+export const told = (turns: readonly Turn[], text: string) =>
+  turns.reduce((n, t) => n + t.prompts.filter((p) => p.text.trim() === text).length, 0)
+
+// unread is what was sent to a session that its turns do not show yet. A
+// prompt leaves once they show it, or once the session has gone idle since
+// it was sent: its turns are written by then, in words the page may not
+// recognize.
+export const unread = (sent: readonly Sent[], turns: readonly Turn[], s: Session | undefined): Sent[] =>
+  sent.filter((p) => told(turns, p.text) <= p.seen && !(s?.state === 'idle' && s.since !== p.since))
 
 // place names a session by its working directory's last element.
 export function place(s: Session): string {

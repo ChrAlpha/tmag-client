@@ -1,12 +1,13 @@
 // What the page knows, as signals the screens read: the credential, the route,
-// the view the watch keeps current, and what a session shows (its turns, its
-// screen, its requests), read from tmag serve when shown. The page keeps only
-// its credential, in this browser's storage, and drafts.
+// the view the watch keeps current, what a session shows (its turns, its
+// screen, its requests), read from tmag serve when shown, and what the page
+// sent it until its turns show it. The page keeps only its credential, in
+// this browser's storage, and drafts.
 
 import { batch, computed, effect, type Signal, signal } from '@preact/signals'
 import * as api from './api'
 import type { Action, Credential, RequestDoc, ScreenDoc, Turn, TurnsDoc } from './contract'
-import { apply, empty, sessions, type View } from './view'
+import { apply, empty, find, follows, type Sent, sessions, told, unread, type View } from './view'
 
 const stored = 'tmag.credential'
 
@@ -80,6 +81,7 @@ export function forget(why = '') {
   turns.clear()
   screens.clear()
   requests.clear()
+  sent.clear()
   batch(() => {
     credential.value = null
     notice.value = why
@@ -180,6 +182,8 @@ export interface Read<T> {
 const turns = new Map<string, Signal<Read<Turn[]>>>()
 const screens = new Map<string, Signal<Read<string>>>()
 const requests = new Map<string, Signal<Read<RequestDoc>>>()
+const sent = new Map<string, Signal<readonly Sent[]>>()
+let sends = 0
 /** Requests answered from this page, hidden before the watch says so. */
 export const answered = signal<ReadonlySet<string>>(new Set())
 
@@ -193,10 +197,18 @@ export const turnsOf = (id: string) => slot(turns, id)
 export const screenOf = (id: string) => slot(screens, id)
 export const requestOf = (id: string) => slot(requests, id)
 
+/** What the page sent a session that its turns do not show yet. */
+export function sentTo(id: string): Signal<readonly Sent[]> {
+  const s = sent.get(id) ?? signal<readonly Sent[]>([])
+  sent.set(id, s)
+  return s
+}
+
 // read runs load now, or once more after the run in flight for the same
-// slot, so that what it shows is never older than what asked for it.
+// slot, so that what it shows is never older than what asked for it. What
+// it read goes to got as it shows.
 const running = new Map<Signal<unknown>, { again: boolean }>()
-function read<T>(into: Signal<Read<T>>, load: (token: string) => Promise<T>) {
+function read<T>(into: Signal<Read<T>>, load: (token: string) => Promise<T>, got?: (value: T) => void) {
   const run = running.get(into)
   if (run) {
     run.again = true
@@ -208,7 +220,11 @@ function read<T>(into: Signal<Read<T>>, load: (token: string) => Promise<T>) {
     do {
       next.again = false
       try {
-        into.value = { value: await authorized(load) }
+        const value = await authorized(load)
+        batch(() => {
+          into.value = { value }
+          got?.(value)
+        })
       } catch (e) {
         into.value = { ...into.value, error: e as Error }
       }
@@ -218,7 +234,17 @@ function read<T>(into: Signal<Read<T>>, load: (token: string) => Promise<T>) {
 }
 
 export function loadTurns(id: string) {
-  read(turnsOf(id), async (t) => (await api.get<TurnsDoc>(t, 'read', { target: id, turns: 20 })).turns)
+  read(
+    turnsOf(id),
+    async (t) => (await api.get<TurnsDoc>(t, 'read', { target: id, turns: 20 })).turns,
+    (turns) => settle(id, turns),
+  )
+}
+
+// settle keeps what was sent to a session that its turns do not show yet.
+function settle(id: string, turns: readonly Turn[]) {
+  const into = sent.get(id)
+  if (into?.value.length) into.value = unread(into.value, turns, find(view.value, id))
 }
 
 export function loadScreen(id: string) {
@@ -231,8 +257,18 @@ export function loadRequest(session: string, request: string) {
 }
 
 export async function act(action: Action) {
+  // A prompt is known by its text and the session's state as it goes, before
+  // the session can start on it.
+  const shown = action.verb === 'send' ? (turnsOf(action.target).value.value ?? []) : []
+  const text = action.verb === 'send' ? action.text.trim() : ''
+  const was = find(view.value, action.target)
   await authorized((t) => api.act(t, action))
   if (action.verb === 'answer') answered.value = new Set(answered.value).add(action.request)
+  if (action.verb === 'send' && follows(text)) {
+    const into = sentTo(action.target)
+    into.value = [...into.value, { id: ++sends, text, seen: told(shown, text), since: was?.since }]
+    settle(action.target, turnsOf(action.target).value.value ?? [])
+  }
 }
 
 // start follows the route, the watch and the clock while the page is open.

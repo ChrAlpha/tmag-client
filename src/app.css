@@ -289,6 +289,9 @@ footer {
   margin-left: 0;
   border-radius: 14px 14px 14px 4px;
 }
+.prompt.sent {
+  opacity: 0.6;
+}
 .prompt.folded {
   max-height: 12em;
   overflow: hidden;

@@ -2,8 +2,8 @@ import type { ComponentChildren } from 'preact'
 import { createContext } from 'preact'
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { Prompt, Session as S } from '../contract'
-import { act, back, loaded, loadScreen, loadTurns, now, screenOf, turnsOf, view } from '../store'
-import { ago, can, find, paneOf, place, status, stoppable } from '../view'
+import { act, back, loaded, loadScreen, loadTurns, now, screenOf, sentTo, turnsOf, view } from '../store'
+import { ago, can, find, follows, paneOf, place, status, stoppable } from '../view'
 import { cls, explain, outcome } from './explain'
 import { Markdown } from './Markdown'
 import { Requests } from './Requests'
@@ -56,27 +56,28 @@ export function Session({ id }: { id: string }) {
       <p class={cls('toast', toast.error && 'error')} role="status">
         {toast.text}
       </p>
-      {!gone && <Composer id={id} s={s} say={say} />}
+      {!gone && <Composer id={id} s={s} screen={showScreen} say={say} />}
     </div>
   )
 }
 
 // Follow keeps a scroller at its end when what it shows changes, as long as
-// the person has not scrolled away from it.
-const Follow = createContext(() => {})
+// the person has not scrolled away from it, or brings it there.
+const Follow = createContext((_pin?: boolean) => {})
 
 function Scroller({ children }: { children: ComponentChildren }) {
   const ref = useRef<HTMLElement>(null)
   const stick = useRef(true)
-  const follow = useCallback(() => {
+  const follow = useCallback((pin = false) => {
     const el = ref.current
+    if (pin) stick.current = true
     if (el && stick.current) el.scrollTop = el.scrollHeight
   }, [])
   useLayoutEffect(() => {
     // A keyboard that opens makes the scroller shorter.
     const el = ref.current
     if (!el) return
-    const resized = new ResizeObserver(follow)
+    const resized = new ResizeObserver(() => follow())
     resized.observe(el)
     return () => resized.disconnect()
   }, [follow])
@@ -96,12 +97,24 @@ function Scroller({ children }: { children: ComponentChildren }) {
 
 function Turns({ id, s }: { id: string; s: S | undefined }) {
   const read = turnsOf(id).value
+  const sent = sentTo(id).value
   const follow = useContext(Follow)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: what is read, or the state, changes what shows; a prompt the person unfolds does not move the scroller
-  useLayoutEffect(follow, [follow, read, s?.state])
+  const before = useRef(sent.length)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: what is read, the state, or what was sent changes what shows; a prompt the person unfolds does not move the scroller
+  useLayoutEffect(() => {
+    // What the person just sent brings them to the end.
+    follow(sent.length > before.current)
+    before.current = sent.length
+  }, [follow, read, s?.state, sent])
   const turns = read.value
+  const shown = sent.map((p) => <PromptText key={`sent-${p.id}`} p={{ text: p.text }} sent />)
   if (!turns) {
-    return <p class={cls('empty', read.error && 'error')}>{read.error ? explain(read.error) : 'Reading its turns…'}</p>
+    return (
+      <div class="timeline">
+        <p class={cls('empty', read.error && 'error')}>{read.error ? explain(read.error) : 'Reading its turns…'}</p>
+        {shown}
+      </div>
+    )
   }
   // The turn that runs is the last one read, unless tmag names another,
   // which the transcript does not show yet.
@@ -123,8 +136,9 @@ function Turns({ id, s }: { id: string; s: S | undefined }) {
           </article>
         )
       })}
-      {!turns.length && !working && <p class="empty">No turns yet.</p>}
+      {!turns.length && !working && !sent.length && <p class="empty">No turns yet.</p>}
       {working && !runsLast && <Running s={working} />}
+      {shown}
       {read.error && <p class="muted error">{explain(read.error)}</p>}
     </div>
   )
@@ -132,12 +146,14 @@ function Turns({ id, s }: { id: string; s: S | undefined }) {
 
 const Running = ({ s }: { s: S }) => <p class={`running ${s.state}`}>{status(s)}…</p>
 
-function PromptText({ p }: { p: Prompt }) {
+// PromptText is a prompt of a turn, or one the page sent that no turn shows
+// yet.
+function PromptText({ p, sent = false }: { p: Prompt; sent?: boolean }) {
   const [open, setOpen] = useState(false)
   const long = p.text.length > 600 || p.text.split('\n').length > 12
-  const who = p.from === 'peer' ? 'from an agent' : p.from === 'task' ? 'background task' : p.from
+  const who = sent ? 'sent' : p.from === 'peer' ? 'from an agent' : p.from === 'task' ? 'background task' : p.from
   return (
-    <div class={cls('prompt', p.from && 'from', long && !open && 'folded')}>
+    <div class={cls('prompt', p.from && 'from', sent && 'sent', long && !open && 'folded')}>
       {who && <span class="who">{who}</span>}
       {p.text || '(no text)'}
       {long && (
@@ -158,7 +174,7 @@ function Screen({ id }: { id: string }) {
   return <pre class="terminal">{text}</pre>
 }
 
-function Composer({ id, s, say }: { id: string; s: S | undefined; say: Say }) {
+function Composer({ id, s, screen, say }: { id: string; s: S | undefined; screen: boolean; say: Say }) {
   const draft = `tmag.draft.${id}`
   const [text, setText] = useState(() => sessionStorage.getItem(draft) ?? '')
   const [busy, setBusy] = useState(false)
@@ -179,7 +195,10 @@ function Composer({ id, s, say }: { id: string; s: S | undefined; say: Say }) {
     else sessionStorage.removeItem(draft)
   }
   const prompts = !s || can(s, 'send')
-  const sendable = !busy && !!s && prompts && !!text.trim()
+  // A prompt is told from the same text sent before by what the turns held
+  // as it went: it waits for the first read of them.
+  const read = turnsOf(id).value
+  const sendable = !busy && !!s && prompts && !!text.trim() && !!(read.value || read.error)
 
   async function run(verb: 'send' | 'interrupt') {
     setBusy(true)
@@ -187,7 +206,8 @@ function Composer({ id, s, say }: { id: string; s: S | undefined; say: Say }) {
       if (verb === 'send') {
         await act({ verb, target: id, text })
         edit('')
-        say('Sent')
+        // It shows at the end of the turns, if they show and it starts one.
+        if (screen || !follows(text)) say('Sent')
       } else {
         await act({ verb, target: id })
         say('Interrupt sent')

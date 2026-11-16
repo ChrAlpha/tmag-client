@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Event, Session, WatchDoc } from './contract'
-import { ago, apply, empty, find, paneOf, sessions, stoppable } from './view'
+import type { Event, Session, Turn, WatchDoc } from './contract'
+import { ago, apply, empty, find, follows, paneOf, type Sent, sessions, stoppable, unread } from './view'
 
 const session = (id: string, state: Session['state'], extra: Partial<Session> = {}): Partial<Session> => ({
   id,
@@ -85,6 +85,33 @@ describe('stoppable', () => {
     expect(stoppable(s('working', 'background')), 'only background tasks run').toBe(false)
     expect(stoppable(s('idle'))).toBe(false)
     expect(stoppable(s('working', undefined, ['send'])), 'no channel carries an interrupt').toBe(false)
+  })
+})
+
+describe('unread', () => {
+  const turn = (...prompts: string[]): Turn => ({ id: 't', prompts: prompts.map((text) => ({ text })), reply: '' })
+  const at = (state: Session['state'], since: string) =>
+    ({ ...session('a', state, { since }), requests: [] }) as Session
+  const sent: Sent = { id: 1, text: 'yes', seen: 1, since: '2026-11-13T10:00:00Z' }
+
+  it('keeps a prompt until the turns show it once more than when it was sent', () => {
+    const before = [turn('yes'), turn('go on')]
+    expect(unread([sent], before, at('working', '2026-11-13T10:00:00Z'))).toEqual([sent])
+    expect(unread([sent], [...before, turn(' yes\n')], at('working', '2026-11-13T10:00:00Z'))).toEqual([])
+  })
+
+  it('lets a prompt go once the session went idle since it was sent', () => {
+    expect(unread([sent], [], at('idle', '2026-11-13T10:00:00Z')), 'still the idle it was sent in').toEqual([sent])
+    expect(unread([sent], [], at('working', '2026-11-13T10:01:00Z'))).toEqual([sent])
+    expect(unread([sent], [], at('idle', '2026-11-13T10:02:00Z')), 'the turn it started has ended').toEqual([])
+    expect(unread([sent], [], undefined), 'a session that ended shows as such').toEqual([sent])
+  })
+})
+
+describe('follows', () => {
+  it('follows a prompt into the turns, not a slash command', () => {
+    expect(follows('fix the test')).toBe(true)
+    expect(follows(' /compact')).toBe(false)
   })
 })
 

@@ -11,9 +11,10 @@ import {
   session,
   startServe,
   stopServe,
+  tmux,
 } from './world'
 
-const { api, web } = agents
+const { api, web, docs } = agents
 
 // Each test pairs anew, so tests run alone, and one after another: they
 // share the agents.
@@ -116,6 +117,36 @@ test("shows a session's turns, and what agents write as Markdown that stays text
   await expect(peer).toHaveClass(/folded/)
   await peer.getByRole('button', { name: 'Show all' }).click()
   await expect(peer).not.toHaveClass(/folded/)
+})
+
+test('shows a prompt it sent until its turns show it, and then only there', async ({ page }) => {
+  await paired(page)
+  await open(page, docs)
+  await expect(page.getByText('Reading its turns…')).toHaveCount(0)
+  const sent = page.locator('.prompt.sent')
+  const shown = page.locator('.prompt:not(.sent)', { hasText: /^block$/ })
+  const before = await shown.count()
+  // The turns read after the send come late, as over a slow network.
+  await page.route(
+    (url) => url.pathname === '/v2/read' && url.searchParams.has('turns'),
+    async (route) => {
+      await new Promise((r) => setTimeout(r, 1500))
+      await route.continue()
+    },
+  )
+  await prompt(page, 'block')
+  try {
+    await expect(sent.locator('.who')).toHaveText('sent')
+    await expect(sent).toContainText('block')
+    // Pi's turn waits on its dialog: only its turns showing the prompt take
+    // it away.
+    await expect(sent).toHaveCount(0)
+    expect(session(docs)?.state).not.toBe('idle')
+    await expect(shown).toHaveCount(before + 1)
+  } finally {
+    // The person answers the dialog in the terminal.
+    tmux('send-keys', '-t', `main:${docs.name}`, 'yes', 'Enter')
+  }
 })
 
 test('allows a permission, and the title counts what waits', async ({ page }) => {
