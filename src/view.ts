@@ -131,6 +131,12 @@ export const told = (turns: readonly Turn[], text: string) =>
 export const unread = (sent: readonly Sent[], turns: readonly Turn[], s: Session | undefined): Sent[] =>
   sent.filter((p) => told(turns, p.text) <= p.seen && !(s?.state === 'idle' && s.since !== p.since))
 
+// helpers says how many subagents a session runs, if it runs any.
+export function helpers(s: Session): string {
+  const n = s.subagents.length
+  return n ? `${n} subagent${n === 1 ? '' : 's'}` : ''
+}
+
 // place names a session by its working directory's last element.
 export function place(s: Session): string {
   return s.cwd?.split('/').filter(Boolean).pop() ?? s.id.slice(0, 8)

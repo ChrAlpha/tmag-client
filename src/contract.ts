@@ -43,7 +43,8 @@ export interface Session {
   runtime?: string
   capabilities: string[]
   requests: Request[]
-  subagents?: unknown[]
+  /** The ids of its running subagents. */
+  subagents: string[]
 }
 
 export interface Pane {
@@ -73,7 +74,7 @@ export interface Event {
   runtime?: string
   capabilities?: string[]
   requests?: Request[]
-  subagents?: unknown[]
+  subagents?: string[]
 }
 
 export type WatchDoc =

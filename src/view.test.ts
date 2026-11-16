@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Event, Session, Turn, WatchDoc } from './contract'
-import { ago, apply, empty, find, follows, paneOf, type Sent, sessions, stoppable, unread } from './view'
+import { ago, apply, empty, find, follows, helpers, paneOf, type Sent, sessions, stoppable, unread } from './view'
 
 const session = (id: string, state: Session['state'], extra: Partial<Session> = {}): Partial<Session> => ({
   id,
@@ -73,6 +73,17 @@ describe('sessions', () => {
       ],
     })
     expect(sessions(v).map((s) => s.id)).toEqual(['blocked', 'working', 'idle-new', 'idle-old'])
+  })
+})
+
+describe('helpers', () => {
+  it('counts the subagents an event reports', () => {
+    let v = apply(empty, { type: 'snapshot', seq: 1, sessions: [session('a', 'working')] })
+    expect(helpers(find(v, 'a') as Session)).toBe('')
+    v = apply(v, event(2, 'SubagentStart', 'a', { state: 'working', subagents: ['s1'] }))
+    expect(helpers(find(v, 'a') as Session)).toBe('1 subagent')
+    v = apply(v, event(3, 'SubagentStart', 'a', { state: 'working', subagents: ['s1', 's2'] }))
+    expect(helpers(find(v, 'a') as Session)).toBe('2 subagents')
   })
 })
 

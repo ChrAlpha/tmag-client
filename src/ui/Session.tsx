@@ -3,7 +3,7 @@ import { createContext } from 'preact'
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { Prompt, Session as S } from '../contract'
 import { act, back, loaded, loadScreen, loadTurns, now, screenOf, sentTo, turnsOf, view } from '../store'
-import { ago, can, find, follows, paneOf, place, status, stoppable } from '../view'
+import { ago, can, find, follows, helpers, paneOf, place, status, stoppable } from '../view'
 import { cls, explain, outcome } from './explain'
 import { Markdown } from './Markdown'
 import { Requests } from './Requests'
@@ -41,7 +41,11 @@ export function Session({ id }: { id: string }) {
         <div class="what">
           <div class="name">{s ? place(s) : 'Session'}</div>
           <div class="meta">
-            {s ? [s.agent, status(s), ago(s.since, now.value)].filter(Boolean).join(' · ') : gone ? 'not running' : ''}
+            {s
+              ? [s.agent, status(s), helpers(s), ago(s.since, now.value)].filter(Boolean).join(' · ')
+              : gone
+                ? 'not running'
+                : ''}
           </div>
         </div>
         {pane && (

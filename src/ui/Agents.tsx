@@ -1,6 +1,6 @@
 import type { Pane, Session } from '../contract'
 import { credential, forget, loaded, now, view } from '../store'
-import { ago, paneOf, place, sessions, status } from '../view'
+import { ago, helpers, paneOf, place, sessions, status } from '../view'
 
 export function Agents() {
   const v = view.value
@@ -54,7 +54,7 @@ function Row({ s, pane }: { s: Session; pane: Pane | undefined }) {
         <span class="dot" />
         <span class="what">
           <span class="name">{place(s)}</span>
-          <span class="meta">{[s.agent, status(s), asks, pane?.target].filter(Boolean).join(' · ')}</span>
+          <span class="meta">{[s.agent, status(s), helpers(s), asks, pane?.target].filter(Boolean).join(' · ')}</span>
         </span>
         <span class="when">{ago(s.since, now.value)}</span>
       </a>
