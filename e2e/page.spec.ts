@@ -150,6 +150,58 @@ test('shows a prompt it sent until its turns show it, and then only there', asyn
   }
 })
 
+test('reads the turn that ended again until its reply is written', async ({ page }, info) => {
+  await paired(page)
+  await open(page, docs)
+  await expect(page.locator('.timeline')).toBeVisible()
+  // For half a second after the turn ends, its reply is not written yet, as
+  // Claude Code may write it after its Stop hook, and no event follows.
+  const text = `a short task on ${info.project.name}`
+  let unwritten = 0
+  await page.route(
+    (url) => url.pathname === '/v2/read' && url.searchParams.has('turns'),
+    async (route) => {
+      const res = await route.fetch()
+      const doc = await res.json()
+      const last = doc.turns.at(-1)
+      if (last?.reply === `answered: ${text}` && (!unwritten || Date.now() - unwritten < 500)) {
+        unwritten ||= Date.now()
+        last.reply = ''
+      }
+      await route.fulfill({ response: res, json: doc })
+    },
+  )
+  await prompt(page, text)
+  await expect.poll(() => unwritten).toBeGreaterThan(0)
+  await expect(page.locator('.reply').last()).toHaveText(`answered: ${text}`)
+})
+
+test('forgets the device without reading on after it', async ({ page }, info) => {
+  await paired(page)
+  await open(page, docs)
+  await expect(page.locator('.timeline')).toBeVisible()
+  // The turn ends with its reply unwritten, so the page means to read it again.
+  const text = `a task to leave on ${info.project.name}`
+  await page.route(
+    (url) => url.pathname === '/v2/read' && url.searchParams.has('turns'),
+    async (route) => {
+      const res = await route.fetch()
+      const doc = await res.json()
+      const last = doc.turns?.at(-1)
+      if (last?.reply === `answered: ${text}`) last.reply = ''
+      await route.fulfill({ response: res, json: doc })
+    },
+  )
+  await prompt(page, text)
+  await expect(page.locator('.turn').last().locator('.muted')).toHaveText('No reply', { timeout: 15_000 })
+  page.on('dialog', (d) => void d.accept())
+  await page.getByRole('button', { name: 'Agents' }).click()
+  await page.getByRole('button', { name: 'Forget' }).click()
+  await expect(page.getByRole('heading', { name: 'Pair this device' })).toBeVisible()
+  await page.waitForTimeout(3500)
+  await expect(page.locator('.notice')).toHaveCount(0)
+})
+
 test('allows a permission, and the title counts what waits', async ({ page }) => {
   await paired(page)
   await open(page, api)

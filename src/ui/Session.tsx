@@ -3,7 +3,7 @@ import { createContext } from 'preact'
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { Prompt, Session as S } from '../contract'
 import { act, back, loaded, loadScreen, loadTurns, now, screenOf, sentTo, turnsOf, view } from '../store'
-import { ago, can, find, follows, helpers, paneOf, place, status, stoppable } from '../view'
+import { ago, can, find, follows, helpers, paneOf, place, status, stoppable, unwritten } from '../view'
 import { cls, explain, outcome } from './explain'
 import { Markdown } from './Markdown'
 import { Requests } from './Requests'
@@ -118,6 +118,22 @@ function Turns({ id, s }: { id: string; s: S | undefined }) {
     before.current = sent.length
   }, [follow, read, s?.state, sent])
   const turns = read.value
+  // What the transcript holds may lag what tmag reported, and no event
+  // follows: the reply of a turn an idle session ended, which Claude Code
+  // may write after its Stop hook, or a prompt sent that no turn shows yet.
+  // The turns are read again every second, three times for each.
+  const lag = useRef({ key: '', left: 0 })
+  useEffect(() => {
+    if (!turns || !(sent.length || unwritten(s, turns))) return
+    const key = `${s?.turn}/${sent[sent.length - 1]?.id}`
+    if (lag.current.key !== key) lag.current = { key, left: 3 }
+    if (!lag.current.left) return
+    const again = setTimeout(() => {
+      lag.current.left--
+      loadTurns(id)
+    }, 1000)
+    return () => clearTimeout(again)
+  }, [id, s, turns, sent])
   const shown = sent.map((p) => <PromptText key={`sent-${p.id}`} p={{ text: p.text }} sent />)
   if (!turns) {
     return (

@@ -232,9 +232,11 @@ export function sentTo(id: string): Signal<readonly Sent[]> {
 
 // read runs load now, or once more after the run in flight for the same
 // slot, so that what it shows is never older than what asked for it. What
-// it read goes to got as it shows.
+// it read goes to got as it shows. An unpaired page reads nothing, whatever
+// asked before it forgot its credential.
 const running = new Map<Signal<unknown>, { again: boolean }>()
 function read<T>(into: Signal<Read<T>>, load: (token: string) => Promise<T>, got?: (value: T) => void) {
+  if (!credential.value) return
   const run = running.get(into)
   if (run) {
     run.again = true
@@ -245,6 +247,7 @@ function read<T>(into: Signal<Read<T>>, load: (token: string) => Promise<T>, got
   void (async () => {
     do {
       next.again = false
+      if (!credential.value) break
       try {
         const value = await authorized(load)
         batch(() => {

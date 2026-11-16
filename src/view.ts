@@ -131,6 +131,14 @@ export const told = (turns: readonly Turn[], text: string) =>
 export const unread = (sent: readonly Sent[], turns: readonly Turn[], s: Session | undefined): Sent[] =>
   sent.filter((p) => told(turns, p.text) <= p.seen && !(s?.state === 'idle' && s.since !== p.since))
 
+// unwritten says whether the turn an idle session last ended has no reply in
+// its turns yet: an agent may write the reply after the hook that reported
+// the end, as Claude Code may after its Stop hook.
+export function unwritten(s: Session | undefined, turns: readonly Turn[]): boolean {
+  const last = turns[turns.length - 1]
+  return !!s?.turn && s.state === 'idle' && last?.id === s.turn && !last.reply
+}
+
 // helpers says how many subagents a session runs, if it runs any.
 export function helpers(s: Session): string {
   const n = s.subagents.length

@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import type { Event, Session, Turn, WatchDoc } from './contract'
-import { ago, apply, empty, find, follows, helpers, paneOf, type Sent, sessions, stoppable, unread } from './view'
+import {
+  ago,
+  apply,
+  empty,
+  find,
+  follows,
+  helpers,
+  paneOf,
+  type Sent,
+  sessions,
+  stoppable,
+  unread,
+  unwritten,
+} from './view'
 
 const session = (id: string, state: Session['state'], extra: Partial<Session> = {}): Partial<Session> => ({
   id,
@@ -123,6 +136,22 @@ describe('follows', () => {
   it('follows a prompt into the turns, not a slash command', () => {
     expect(follows('fix the test')).toBe(true)
     expect(follows(' /compact')).toBe(false)
+  })
+})
+
+describe('unwritten', () => {
+  it('says when the turn an idle session ended has no reply yet', () => {
+    const at = (state: Session['state'], turn?: string) =>
+      ({ ...session('a', state, { turn }), requests: [] }) as Session
+    const turns: Turn[] = [
+      { id: 't1', prompts: [], reply: 'done' },
+      { id: 't2', prompts: [], reply: '' },
+    ]
+    expect(unwritten(at('idle', 't2'), turns)).toBe(true)
+    expect(unwritten(at('working', 't2'), turns), 'a running turn writes on').toBe(false)
+    expect(unwritten(at('idle', 't3'), turns), 'its turns do not hold it yet').toBe(false)
+    expect(unwritten(at('idle', 't1'), turns.slice(0, 1))).toBe(false)
+    expect(unwritten(at('idle'), turns)).toBe(false)
   })
 })
 
