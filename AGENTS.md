@@ -42,6 +42,7 @@ and how to set it up.
 | Path | Role |
 | --- | --- |
 | `index.html`, `src/main.tsx` | The document, and the page fitted to the visual viewport |
+| `public/` | tmag's icon, as tmux-agent-experience's landing page has it, and the PNG iOS needs of it |
 | `vite.config.ts` | The build, its Content-Security-Policy, the `/v2/` proxy of `dev` and `preview`, and Vitest |
 | `src/contract.ts` | The documents the page reads and writes |
 | `src/api.ts` | Requests, pairing, and the event stream |

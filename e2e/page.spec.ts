@@ -43,6 +43,8 @@ test.afterEach(async () => {
 })
 
 test('pairs with a code and opens the session it was sent to', async ({ page }) => {
+  const refused: string[] = []
+  page.on('console', (m) => m.text().includes('Content Security Policy') && refused.push(m.text()))
   await open(page, api)
   await expect(page.getByRole('heading', { name: 'Pair this device' })).toBeVisible()
   await page.getByRole('textbox', { name: 'Code' }).fill('WRONGCODE')
@@ -55,6 +57,9 @@ test('pairs with a code and opens the session it was sent to', async ({ page }) 
   await page.getByRole('button', { name: 'Agents' }).click()
   for (const name of ['api', 'web', 'docs']) await expect(page.locator('.row .name', { hasText: name })).toBeVisible()
   await expect(page.locator('footer')).toContainText('This device: e2e')
+  // The page loads nothing its policy refuses, and its icons are its own.
+  expect(refused).toEqual([])
+  for (const icon of ['/favicon.svg', '/apple-touch-icon.png']) expect((await page.request.get(icon)).ok()).toBe(true)
 })
 
 test('goes back to the list as the browser would', async ({ page }) => {
