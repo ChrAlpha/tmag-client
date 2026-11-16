@@ -171,6 +171,19 @@ test('stops a turn, and shows the screen of its pane', async ({ page }) => {
   await expect(page.locator('.timeline')).toBeVisible()
 })
 
+test('says in its own words why tmag refused a prompt, and keeps the prompt', async ({ page }) => {
+  await paired(page)
+  await open(page, web)
+  await prompt(page, 'a long task')
+  await expect.poll(() => session(web)?.state).toBe('working')
+  // Codex in a terminal takes a prompt only while it is idle.
+  await prompt(page, 'meanwhile')
+  await expect(page.locator('.toast')).toHaveText(
+    'Not sent: it cannot take a prompt while it works, or has not taken the last one yet. Send it again once it is idle.',
+  )
+  await expect(page.getByRole('textbox', { name: 'Message' })).toHaveValue('meanwhile')
+})
+
 test('says when tmag serve is gone, and picks up where it was when it is back', async ({ page }) => {
   await paired(page)
   await open(page, api)

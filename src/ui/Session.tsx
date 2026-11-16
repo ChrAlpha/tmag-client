@@ -190,10 +190,10 @@ function Composer({ id, s, say }: { id: string; s: S | undefined; say: Say }) {
         say('Sent')
       } else {
         await act({ verb, target: id })
-        say('Stopped')
+        say('Interrupt sent')
       }
     } catch (e) {
-      say(outcome(e), true)
+      say(outcome(e, verb), true)
     }
     setBusy(false)
   }

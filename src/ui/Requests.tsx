@@ -38,7 +38,7 @@ function Card({ s, r, say }: { s: Session; r: Request; say: Say }) {
       await act({ verb: 'answer', target: s.id, request: r.id, decision, ...extra })
       say('Answered')
     } catch (e) {
-      setError(outcome(e))
+      setError(outcome(e, 'answer'))
       setBusy(false)
     }
   }
