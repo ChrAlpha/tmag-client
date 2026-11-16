@@ -3,7 +3,7 @@ import { createContext } from 'preact'
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { Prompt, Session as S } from '../contract'
 import { act, loaded, loadScreen, loadTurns, now, screenOf, turnsOf, view } from '../store'
-import { ago, can, find, paneOf, place, status } from '../view'
+import { ago, can, find, paneOf, place, status, stoppable } from '../view'
 import { cls, explain, outcome } from './explain'
 import { Markdown } from './Markdown'
 import { Requests } from './Requests'
@@ -178,7 +178,8 @@ function Composer({ id, s, say }: { id: string; s: S | undefined; say: Say }) {
     if (value) sessionStorage.setItem(draft, value)
     else sessionStorage.removeItem(draft)
   }
-  const sendable = !busy && !!s && can(s, 'send') && !!text.trim()
+  const prompts = !s || can(s, 'send')
+  const sendable = !busy && !!s && prompts && !!text.trim()
 
   async function run(verb: 'send' | 'interrupt') {
     setBusy(true)
@@ -205,28 +206,34 @@ function Composer({ id, s, say }: { id: string; s: S | undefined; say: Say }) {
         if (sendable) void run('send')
       }}
     >
-      {s && s.state !== 'idle' && can(s, 'interrupt') && (
+      {s && stoppable(s) && (
         <button class="stop" type="button" disabled={busy} onClick={() => run('interrupt')}>
           Stop
         </button>
       )}
-      <textarea
-        ref={box}
-        rows={1}
-        aria-label="Message"
-        placeholder="Message"
-        value={text}
-        onInput={(e) => edit(e.currentTarget.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && sendable) {
-            e.preventDefault()
-            void run('send')
-          }
-        }}
-      />
-      <button class="primary" type="submit" disabled={!sendable}>
-        Send
-      </button>
+      {prompts ? (
+        <>
+          <textarea
+            ref={box}
+            rows={1}
+            aria-label="Message"
+            placeholder="Message"
+            value={text}
+            onInput={(e) => edit(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && sendable) {
+                e.preventDefault()
+                void run('send')
+              }
+            }}
+          />
+          <button class="primary" type="submit" disabled={!sendable}>
+            Send
+          </button>
+        </>
+      ) : (
+        <p class="muted">tmag has no way to prompt this session.</p>
+      )}
     </form>
   )
 }

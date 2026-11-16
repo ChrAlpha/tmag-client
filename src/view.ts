@@ -97,6 +97,12 @@ export function paneOf(view: View, s: Session): Pane | undefined {
 // can says whether tmag can carry a control verb to the session.
 export const can = (s: Session, verb: 'send' | 'interrupt' | 'answer') => s.capabilities.includes(verb)
 
+// stoppable says whether the session runs a turn an interrupt can stop: tmag
+// interrupts a session that waits on a prompt, or whose main agent works, not
+// one that runs only background tasks.
+export const stoppable = (s: Session) =>
+  can(s, 'interrupt') && (s.state === 'blocked' || (s.state === 'working' && s.kind !== 'background'))
+
 // place names a session by its working directory's last element.
 export function place(s: Session): string {
   return s.cwd?.split('/').filter(Boolean).pop() ?? s.id.slice(0, 8)

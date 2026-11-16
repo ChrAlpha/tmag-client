@@ -521,3 +521,8 @@ footer {
   color: var(--danger);
   border-color: var(--danger);
 }
+.composer > .muted {
+  flex: 1;
+  margin: 0;
+  align-self: center;
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Event, Session, WatchDoc } from './contract'
-import { ago, apply, empty, find, paneOf, sessions } from './view'
+import { ago, apply, empty, find, paneOf, sessions, stoppable } from './view'
 
 const session = (id: string, state: Session['state'], extra: Partial<Session> = {}): Partial<Session> => ({
   id,
@@ -73,6 +73,18 @@ describe('sessions', () => {
       ],
     })
     expect(sessions(v).map((s) => s.id)).toEqual(['blocked', 'working', 'idle-new', 'idle-old'])
+  })
+})
+
+describe('stoppable', () => {
+  it("offers Stop where tmag's gate would carry an interrupt", () => {
+    const s = (state: Session['state'], kind?: string, capabilities = ['interrupt']) =>
+      ({ ...session('a', state, { kind, capabilities }), requests: [] }) as Session
+    expect(stoppable(s('working'))).toBe(true)
+    expect(stoppable(s('blocked', 'permission'))).toBe(true)
+    expect(stoppable(s('working', 'background')), 'only background tasks run').toBe(false)
+    expect(stoppable(s('idle'))).toBe(false)
+    expect(stoppable(s('working', undefined, ['send'])), 'no channel carries an interrupt').toBe(false)
   })
 })
 

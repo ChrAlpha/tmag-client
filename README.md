@@ -17,7 +17,7 @@ contract, on its own origin under `/v2/`, and loads nothing from anywhere else.
 - **A session**: its last 20 turns, each the prompts it was given (including
   those from other agents and background tasks) and its reply, rendered as
   Markdown. Below them:
-  - a box to prompt it, and Stop while it works;
+  - a box to prompt it, and Stop while a turn runs;
   - a card for each request it waits on: a permission (Allow, or Deny with a
     reason), a question (pick an option or write your own answer), a plan
     (Approve, or Keep planning);
