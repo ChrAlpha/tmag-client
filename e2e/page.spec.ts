@@ -1,3 +1,4 @@
+import { appendFileSync } from 'node:fs'
 import { expect, type Page, test } from '@playwright/test'
 import type { Credential } from '../src/contract'
 import {
@@ -218,6 +219,17 @@ test('stops a turn, and shows the screen of its pane', async ({ page }) => {
   await expect(page.locator('pre.terminal')).toContainText('ready')
   await page.getByRole('button', { name: 'Turns' }).click()
   await expect(page.locator('.timeline')).toBeVisible()
+})
+
+test('keeps the screen current while it shows', async ({ page }, info) => {
+  await paired(page)
+  await open(page, docs)
+  await page.getByRole('button', { name: 'Screen' }).click()
+  await expect(page.locator('pre.terminal')).toContainText('ready')
+  // The agent writes to its terminal, which no event reports.
+  const tty = tmux('display-message', '-p', '-t', `main:${docs.name}`, '#{pane_tty}').trim()
+  appendFileSync(tty, `\r\nstill thinking on ${info.project.name}\r\n`)
+  await expect(page.locator('pre.terminal')).toContainText(`still thinking on ${info.project.name}`)
 })
 
 test('says in its own words why tmag refused a prompt, and keeps the prompt', async ({ page }) => {

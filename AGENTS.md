@@ -21,7 +21,8 @@ and how to set it up.
 - **The watch is the truth.** `src/view.ts` rebuilds sessions and panes from
   `/v2/watch` as the contract tells a client to, the rules of
   tmux-agent-experience's e2e follower. What the page reads on demand (turns,
-  a request, a screen) it reads again when an event reports that session. A
+  a request, a screen) it reads again when an event reports that session, and
+  a screen every two seconds while it shows, since it changes unreported. A
   control action whose answer is lost is an unknown outcome: the page says so
   and never tries again by itself.
 - **What an agent wrote stays text.** Components render strings as text.

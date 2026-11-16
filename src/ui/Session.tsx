@@ -24,6 +24,13 @@ export function Session({ id }: { id: string }) {
   useEffect(() => {
     if (s) (showScreen ? loadScreen : loadTurns)(id)
   }, [id, s, showScreen])
+  // A screen also changes with nothing to report, as an agent writes: it is
+  // read again every two seconds while it shows.
+  useEffect(() => {
+    if (!showScreen) return
+    const again = setInterval(() => document.hidden || loadScreen(id), 2000)
+    return () => clearInterval(again)
+  }, [id, showScreen])
 
   return (
     <div class="screen session">
