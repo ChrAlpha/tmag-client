@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'preact/hooks'
 import { Failure } from '../api'
-import { nameable } from '../route'
-import { add, back, linked, named, notice } from '../store'
+import { nameable, parse } from '../route'
+import { add, back, go, linked, named, notice } from '../store'
 import { explain } from './explain'
+import { Header } from './Header'
 import { useVisit } from './visit'
 
 // Pair pairs the page with a computer: the one that serves it, or another
@@ -28,7 +29,9 @@ export function Pair({ adding = false }: { adding?: boolean }) {
   async function submit(ev: Event) {
     ev.preventDefault()
     if (other && !nameable(at)) {
-      setError('A name is lowercase letters, digits and -, at most 32, and not s, r, p, start or add.')
+      setError(
+        'A name is lowercase letters, digits and -, at most 32, and none of the words links use: s, r, p, start, add, projects, settings.',
+      )
       return
     }
     setBusy(true)
@@ -41,7 +44,7 @@ export function Pair({ adding = false }: { adding?: boolean }) {
         if (v.shown()) setBusy(false)
         return
       }
-      if (then?.name === at) location.replace(then.hash)
+      if (then?.name === at) go(parse(then.hash), { replace: true })
       else if (adding) back()
     } catch (e) {
       if (!v.shown()) return
@@ -56,19 +59,20 @@ export function Pair({ adding = false }: { adding?: boolean }) {
 
   return (
     <div class="screen pair">
-      <header>
-        {adding && (
-          <button class="back" type="button" aria-label="Agents" onClick={back}>
-            ‹
-          </button>
-        )}
-        <h1>{adding ? 'Add a computer' : 'Pair this device'}</h1>
-      </header>
+      <Header title={adding ? 'Add a computer' : 'Pair this device'} up={adding} />
       <main class="scroll">
         {notice.value && <p class="notice">{notice.value}</p>}
-        <p>On the computer, run</p>
-        <pre>tmag auth pair phone</pre>
-        <p>and enter the code it prints. A code works once, for ten minutes.</p>
+        {!adding && (
+          <p class="lead">
+            See what the coding agents on your computer do, answer what they ask, and prompt them, from here.
+          </p>
+        )}
+        <ol class="steps">
+          <li>
+            On the computer, run <pre>tmag auth pair phone</pre>
+          </li>
+          <li>Enter the code it prints. A code works once, for ten minutes.</li>
+        </ol>
         <form onSubmit={submit}>
           <label class="check">
             <input

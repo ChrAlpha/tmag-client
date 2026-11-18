@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks'
 import type { Computer } from '../computer'
 import type { Key } from '../contract'
 import { outcome } from './explain'
-import type { Say } from './Session'
+import type { Say } from './toast'
 
 // The keys a person answers an agent's dialog with, as the bar shows them.
 const keys: { label: string; key: Key; name?: string }[] = [

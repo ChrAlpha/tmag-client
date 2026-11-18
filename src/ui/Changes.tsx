@@ -64,7 +64,8 @@ export function Changes({ c, id, s, put }: { c: Computer; id: string; s: Session
             onClick={() => {
               const draft = c.draftOf(id)
               const rowsOf = (file: string) => lines(c.patchOf(id, file).value.value ?? '')
-              draft.value = [draft.value.trimEnd(), prompt(said, rowsOf)].filter(Boolean).join('\n\n')
+              const note = prompt(said, rowsOf)
+              draft.value = draft.value ? `${draft.value}\n\n${note}` : note
               comments.value = []
               put()
             }}

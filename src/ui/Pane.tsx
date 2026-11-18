@@ -1,10 +1,13 @@
 import { useEffect } from 'preact/hooks'
 import type { Computer } from '../computer'
 import { hash } from '../route'
-import { back, computers, title } from '../store'
+import { computers, title } from '../store'
 import { cls } from './explain'
+import { Header } from './Header'
 import { KeyBar } from './KeyBar'
-import { Screen, Scroller, useToast } from './Session'
+import { Screen } from './Screen'
+import { Scroller } from './Scroller'
+import { useToast } from './toast'
 
 // PaneScreen is what a pane shows that no session of tmag's does yet, as an
 // agent tmag started shows a trust dialog or a login, with keys to answer
@@ -32,27 +35,21 @@ export function PaneScreen({ c, pane }: { c: Computer; pane: string }) {
   useEffect(() => {
     if (!session || !held.value) return
     const into = c.draftOf(session)
-    into.value = [into.value.trimEnd(), held.value].filter(Boolean).join('\n\n')
+    into.value = into.value ? `${into.value}\n\n${held.value}` : held.value
     held.value = ''
   }, [c, session, held])
   return (
     <div class="screen session">
-      <header>
-        <button class="back" type="button" aria-label="Agents" onClick={back}>
-          ‹
-        </button>
-        <div class="what">
-          <h1 class="name">Pane {id}</h1>
-          <div class="meta">
-            {computers.value.length > 1 ? `${title(c)} · ` : ''}an agent tmag started, which shows no session yet
+      <Header
+        title={`Pane ${id}`}
+        meta={`${computers.value.length > 1 ? `${title(c)} · ` : ''}an agent tmag started, which shows no session yet`}
+      >
+        {session && (
+          <div class="ties">
+            <a href={hash({ name: 'session', at: c.name, id: session })}>Open its session</a>
           </div>
-          {session && (
-            <div class="ties">
-              <a href={hash({ name: 'session', at: c.name, id: session })}>Open its session</a>
-            </div>
-          )}
-        </div>
-      </header>
+        )}
+      </Header>
       {held.value && (
         <p class="held" role="status">
           Its prompt was not given: once the pane shows its session, it waits in that session's message.

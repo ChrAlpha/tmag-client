@@ -1,4 +1,8 @@
+import { readFileSync } from 'node:fs'
 import { defineConfig, type Plugin } from 'vitest/config'
+
+// The version the page says it is, as package.json names it.
+const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
 
 // Where the development and preview servers find tmag serve, and other
 // computers, each `name=url` in TMAG_COMPUTERS. They proxy /v2/ to the one
@@ -40,6 +44,7 @@ const contentSecurityPolicy: Plugin = {
 
 export default defineConfig({
   plugins: [contentSecurityPolicy],
+  define: { 'import.meta.env.VERSION': JSON.stringify(version) },
   oxc: { jsx: { runtime: 'automatic', importSource: 'preact' } },
   server: { proxy },
   preview: { proxy },
