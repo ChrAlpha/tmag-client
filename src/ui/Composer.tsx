@@ -24,7 +24,9 @@ export function Composer({
 }) {
   const draft = c.draftOf(id)
   const text = draft.value
-  const [busy, setBusy] = useState(false)
+  const [mine, setBusy] = useState(false)
+  // A prompt on its way from this screen or another holds the next one.
+  const busy = mine || c.isSending(id)
   const box = useRef<HTMLTextAreaElement>(null)
 
   // The box grows with what it holds, up to 40% of the window.

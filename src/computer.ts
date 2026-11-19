@@ -42,6 +42,12 @@ import {
   type View,
 } from './view'
 
+/**
+ * The sessions a prompt or an interrupt is on its way to, by the instance
+ * they are of, whichever screen and whichever address of it sent it.
+ */
+const sending = signal<ReadonlySet<string>>(new Set())
+
 /** A computer as the page keeps it. */
 export interface Saved {
   /** '' for the computer that serves the page; else where it is proxied. */
@@ -156,6 +162,8 @@ export class Computer {
   // can says whether it serves an operation: where it does not say, only
   // what every computer the page works with serves.
   can(operation: string): boolean {
+    // One that said what it is but not which computer it is serves nothing.
+    if (this.info.value && !this.info.value.instance) return false
     const ops = this.info.value?.operations
     return ops
       ? ops.includes(operation)
@@ -283,6 +291,8 @@ export class Computer {
       batch(() => {
         this.view.value = empty
         this.loaded.value = false
+        // What it shows again comes from a snapshot of its own.
+        this.#cursor = null
         this.problem.value = new Error(
           'tmag on the computer does not say which computer it is, which the page needs. Update it.',
         )
@@ -485,6 +495,11 @@ export class Computer {
       (v) => (v ? JSON.stringify(v) : ''),
     )
 
+  #going = (id: string) => `${this.#scope()}\u0000${id}`
+
+  /** Whether a prompt or an interrupt is on its way to a session of the instance it is now. */
+  isSending = (id: string) => sending.value.has(this.#going(id))
+
   /** What the page sent a session that its turns do not show yet. */
   sentTo(id: string): Signal<readonly Sent[]> {
     const s = this.#sent.get(id) ?? signal<readonly Sent[]>([])
@@ -608,7 +623,18 @@ export class Computer {
     const text = send ? action.text.trim() : ''
     const was = 'target' in action ? find(this.view.value, action.target) : undefined
     const instance = this.instance
-    const result = await this.#authorized((t) => api.act<T>(this.base, t, action))
+    const on = action.verb === 'send' || action.verb === 'interrupt' ? this.#going(action.target) : undefined
+    if (on) sending.value = new Set(sending.value).add(on)
+    let result: T
+    try {
+      result = await this.#authorized((t) => api.act<T>(this.base, t, action))
+    } finally {
+      if (on) {
+        const left = new Set(sending.value)
+        left.delete(on)
+        sending.value = left
+      }
+    }
     // What another instance answers at this address since is not this one's.
     if (this.instance !== instance) return result
     if (action.verb === 'answer') this.answered.value = new Set(this.answered.value).add(action.request)

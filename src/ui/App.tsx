@@ -26,6 +26,8 @@ export function App() {
     screen =
       !c || r.name === 'start' ? (
         <Missing name={r.at} />
+      ) : c.info.value && !c.info.value.instance ? (
+        <Nameless c={c} />
       ) : r.name === 'session' ? (
         <Session key={`${r.at}/${r.id}`} c={c} id={r.id} request={r.request} />
       ) : (
@@ -95,6 +97,19 @@ function Later() {
       <button class="link" type="button" onClick={() => (later.value = null)}>
         Dismiss
       </button>
+    </div>
+  )
+}
+
+// Nameless is a link to a computer that does not say which computer it is,
+// of which the page shows nothing.
+function Nameless({ c }: { c: Computer }) {
+  return (
+    <div class="screen session">
+      <Header title={title(c)} />
+      <main class="scroll">
+        <p class="empty">{c.problem.value ? explain(c.problem.value) : 'Asking the computer which it is…'}</p>
+      </main>
     </div>
   )
 }

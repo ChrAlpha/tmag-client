@@ -1500,4 +1500,33 @@ test('works with no computer that does not say which it is', async ({ page }) =>
   await page.goto('/')
   await expect(page.locator('.bar')).toContainText('does not say which computer it is')
   await expect(page.locator('li.row:not(.skeleton)')).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'New agent', exact: true })).toHaveCount(0)
+  await open(page, api)
+  await expect(page.locator('main .empty')).toContainText('does not say which computer it is')
+  await expect(page.getByRole('textbox', { name: 'Message' })).toHaveCount(0)
+})
+
+test('holds the next prompt while one is on its way, from whichever screen it went', async ({ page }) => {
+  await paired(page)
+  let release = () => {}
+  const held = new Promise<void>((r) => {
+    release = r
+  })
+  await page.route(
+    (url) => url.pathname === '/v2/act',
+    async (route) => {
+      await held
+      await route.continue()
+    },
+  )
+  await page.goto('/')
+  await tap(page, docs)
+  await prompt(page, 'on its way')
+  await back(page)
+  await tap(page, docs)
+  await page.getByRole('textbox', { name: 'Message' }).fill('the next one')
+  await expect(page.getByRole('button', { name: 'Send' })).toBeDisabled()
+  release()
+  await expect(page.getByRole('button', { name: 'Send' })).toBeEnabled()
+  await expect.poll(() => said(docs)).toContain('on its way')
 })

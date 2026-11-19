@@ -187,9 +187,11 @@ export function Start({ at, dir: linked }: { at: string; dir?: string }) {
           <p class="empty">
             {waits
               ? `Asking ${title(waits)} what it serves…${waits.problem.value ? ` ${explain(waits.problem.value)}` : ''}`
-              : routed
-                ? `tmag on ${title(routed)} is older than tmag start, so the page starts no agent there${linked ? ` in ${linked}` : ''}.`
-                : 'No computer the page works with starts agents: its tmag is older than tmag start.'}
+              : routed?.info.value && !routed.info.value.instance
+                ? `${title(routed)} does not say which computer it is, so the page starts no agent there.`
+                : routed
+                  ? `tmag on ${title(routed)} is older than tmag start, so the page starts no agent there${linked ? ` in ${linked}` : ''}.`
+                  : 'No computer the page works with starts agents: its tmag is older than tmag start.'}
           </p>
         </main>
       </div>
