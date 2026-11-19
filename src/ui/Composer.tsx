@@ -29,13 +29,14 @@ export function Composer({
   const busy = mine || c.isSending(id)
   const box = useRef<HTMLTextAreaElement>(null)
 
-  // The box grows with what it holds, up to 40% of the window.
+  // The box grows with what it holds, up to 40% of the room under the
+  // screen's bar, which a keyboard shrinks as it opens (see app.css).
   // biome-ignore lint/correctness/useExhaustiveDependencies: the text sets the box's scrollHeight
   useLayoutEffect(() => {
     const el = box.current
     if (!el) return
     el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, innerHeight * 0.4)}px`
+    el.style.height = `${el.scrollHeight + el.offsetHeight - el.clientHeight}px`
   }, [text])
 
   const edit = (value: string) => {
@@ -90,13 +91,7 @@ export function Composer({
       }}
     >
       {s && stoppable(s) && c.can('interrupt') && (
-        <button
-          class="icon-button stop"
-          type="button"
-          aria-label="Stop"
-          disabled={busy}
-          onClick={() => run('interrupt')}
-        >
+        <button class="stop" type="button" aria-label="Stop" disabled={busy} onClick={() => run('interrupt')}>
           <Stop />
         </button>
       )}
@@ -116,7 +111,7 @@ export function Composer({
               }
             }}
           />
-          <button class="icon-button send" type="submit" aria-label="Send" disabled={!sendable}>
+          <button class="send primary" type="submit" aria-label="Send" disabled={!sendable}>
             <Send />
           </button>
         </>

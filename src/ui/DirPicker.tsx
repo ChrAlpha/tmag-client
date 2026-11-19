@@ -132,7 +132,7 @@ export function DirPicker({
             <span class="mono">{tilde(parent, home)}</span>
             {parent !== '/' && (
               <button
-                class="icon-button small"
+                class="icon-button"
                 type="button"
                 aria-label="Up one level"
                 onClick={() => pick(`${parent.slice(0, parent.lastIndexOf('/')) || '/'}/`.replace('//', '/'))}

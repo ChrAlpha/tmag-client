@@ -79,15 +79,25 @@ async function prompt(page: Page, text: string) {
   await page.getByRole('button', { name: 'Send' }).click()
 }
 
+// What the page's Content-Security-Policy refused while a test ran: a
+// stylesheet of an Axiom element whose version moved from its hash, or
+// anything the page should not load. Every test fails on one.
+const refusals = new WeakMap<Page, string[]>()
+
+test.beforeEach(({ page }) => {
+  const refused: string[] = []
+  refusals.set(page, refused)
+  page.on('console', (m) => m.text().includes('Content Security Policy') && refused.push(m.text()))
+})
+
 test.afterEach(async ({ page }) => {
   // A read the page polls for may be in a test's route as it ends.
   await page.unrouteAll({ behavior: 'ignoreErrors' })
   for (const a of Object.values(agents)) await idle(a)
+  expect(refusals.get(page)).toEqual([])
 })
 
 test('pairs with a code and opens the session it was sent to', async ({ page }) => {
-  const refused: string[] = []
-  page.on('console', (m) => m.text().includes('Content Security Policy') && refused.push(m.text()))
   await open(page, api)
   await expect(page.getByRole('heading', { name: 'Pair this device' })).toBeVisible()
   await page.getByRole('textbox', { name: 'Code' }).fill('WRONGCODE')
@@ -100,8 +110,7 @@ test('pairs with a code and opens the session it was sent to', async ({ page }) 
   await back(page)
   for (const name of ['api', 'web', 'docs']) await expect(page.locator('.row .name', { hasText: name })).toBeVisible()
   await expect(await computers(page)).toContainText('This device: e2e')
-  // The page loads nothing its policy refuses, and its icons are its own.
-  expect(refused).toEqual([])
+  // Its icons are its own.
   for (const icon of ['/favicon.svg', '/apple-touch-icon.png']) expect((await page.request.get(icon)).ok()).toBe(true)
 })
 
@@ -1233,6 +1242,29 @@ test('shows sessions by project, and starts another agent in one', async ({ page
   await expect(page.getByRole('radio', { name: 'Claude Code' })).toBeChecked()
   await back(page)
   await expect(page.getByRole('heading', { name: 'Projects' })).toBeVisible()
+})
+
+test('starts an agent again from the tile of a place where none runs now', async ({ page }) => {
+  test.skip(!serves('dirs'), 'tmag lists directories after 0.8.0')
+  // A place outside the agents' directories, which other tests list.
+  const lab = join(process.env.TMAG_E2E_DIR ?? '', 'lab')
+  mkdirSync(lab, { recursive: true })
+  const sid = '0f000000-0000-7000-8000-00000000000f'
+  const started = startable({ FAKE_SESSION: sid, FAKE_HOOKS: '1' })
+  try {
+    await paired(page)
+    await page.goto(`/#/start/${encodeURIComponent(lab)}`)
+    await page.getByRole('button', { name: 'Start', exact: true }).click()
+    await expect(page).toHaveURL(new RegExp(`#/s/${sid}$`), { timeout: 30_000 })
+  } finally {
+    started.stop()
+  }
+  await page.goto('/#/projects')
+  const tile = page.getByRole('region', { name: 'Recent' }).getByRole('link', { name: /^lab: new agent in .*\/lab$/ })
+  await expect(tile).toHaveText('lab', { timeout: 15_000 })
+  await tile.click()
+  await expect(page.getByRole('heading', { name: 'New agent' })).toBeVisible()
+  await expect(picked(page)).toContainText(lab)
 })
 
 test('chooses where to start from where agents ran and the directories a path completes in', async ({ page }) => {

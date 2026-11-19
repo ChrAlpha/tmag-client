@@ -12,7 +12,7 @@ const keys: { label: string; key: Key; name?: string }[] = [
   { label: '↓', key: 'Down', name: 'Down' },
   { label: '←', key: 'Left', name: 'Left' },
   { label: '→', key: 'Right', name: 'Right' },
-  { label: 'Space', key: 'Space' },
+  { label: '␣', key: 'Space', name: 'Space' },
   { label: '⌫', key: 'BSpace', name: 'Backspace' },
   { label: 'y', key: 'y' },
   { label: 'n', key: 'n' },
@@ -84,7 +84,7 @@ export function KeyBar({ c, target, say }: { c: Computer; target: string; say: S
           value={text}
           onInput={(e) => setText(e.currentTarget.value)}
         />
-        <button class="primary" type="submit" aria-label="Enter" disabled={waiting}>
+        <button class="primary enter" type="submit" aria-label="Enter" disabled={waiting}>
           ⏎
         </button>
       </form>

@@ -17,8 +17,10 @@ import {
   title,
 } from '../store'
 import { agentName, sessions } from '../view'
+import { Surface } from './axiom'
 import { chosen, DirPicker, missing } from './DirPicker'
 import { cls, explain, outcome, refusal } from './explain'
+import { useFrame } from './frame'
 import { Header } from './Header'
 import { useVisit } from './visit'
 
@@ -102,6 +104,7 @@ export function Start({ at, dir: linked }: { at: string; dir?: string }) {
   // A start can take a while: what it ends in goes to the sheet while the
   // person stays on it, and to a bar once they left it.
   const visit = useVisit()
+  const frame = useFrame()
   // What went wrong comes into view, wherever the sheet was scrolled.
   const said = useRef<HTMLParagraphElement>(null)
   // biome-ignore lint/correctness/useExhaustiveDependencies: each time the person is told, even the same again
@@ -158,7 +161,7 @@ export function Start({ at, dir: linked }: { at: string; dir?: string }) {
 
   if (s.changed || (p && !kept)) {
     return (
-      <div class="screen sheet">
+      <div class="screen sheet" ref={frame}>
         <Header title="New agent" />
         <main class="scroll">
           <div class="empty">
@@ -181,7 +184,7 @@ export function Start({ at, dir: linked }: { at: string; dir?: string }) {
   if (!c) {
     const waits = name === null ? routed : strict || p ? undefined : all.find((x) => !x.info.value)
     return (
-      <div class="screen sheet">
+      <div class="screen sheet" ref={frame}>
         <Header title="New agent" />
         <main class="scroll">
           <p class="empty">
@@ -315,137 +318,137 @@ export function Start({ at, dir: linked }: { at: string; dir?: string }) {
     'agent' in w ? 'agent' in who && who.agent === w.agent : 'template' in who && who.template === w.template
 
   return (
-    <div class="screen sheet">
+    <form class="screen sheet" ref={frame} onSubmit={submit}>
       <Header title="New agent" meta={`on ${title(c)}`} />
-      <form class="start" onSubmit={submit}>
-        <main class="scroll">
-          {several && (
-            <fieldset class="choices">
-              <legend>Computer</legend>
-              <div class="chips">
-                {able.map((x) => (
-                  <label key={x.name} class={cls('choice', x === c && 'on')}>
-                    <input
-                      type="radio"
-                      name="computer"
-                      checked={x === c}
-                      onClick={() => {
-                        // Another computer starts from its own defaults, or
-                        // from the directory the link named on it.
-                        if (x === c) return set({ pinned: pin(x) })
-                        turned.current++
-                        const back = x === routed && linked
-                        set({
-                          pinned: pin(x),
-                          typed: back ? linked : null,
-                          opened: back ? false : null,
-                          who: null,
-                          chose: false,
-                          template: '',
-                          branch: null,
-                        })
-                        setError('')
-                        setStarted(null)
-                      }}
-                    />
-                    {title(x)}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-          )}
+      <main class="scroll">
+        {several && (
           <fieldset class="choices">
-            <legend>Where</legend>
-            <DirPicker
-              key={instanceOf(c) ?? c.name}
-              c={c}
-              value={value}
-              onChange={(t) => act({ typed: t, opened: true })}
-              onChoose={(d) => {
-                if (!s.chose) set({ who: { agent: usual(c, d) } })
-              }}
-              open={open}
-              setOpen={(o) => act({ opened: o })}
-            />
-            {offered && (
-              <label class="check">
-                <input
-                  type="checkbox"
-                  checked={s.branch !== null}
-                  onChange={(e) => act({ branch: e.currentTarget.checked ? '' : null })}
-                />
-                In a worktree of its own
-              </label>
-            )}
-            {s.branch !== null && (
-              <input
-                class="field mono"
-                aria-label="Branch"
-                placeholder={`A branch${repo ? ` of ${where(dir, repo).name}` : ''}, new or not`}
-                autocapitalize="none"
-                autocomplete="off"
-                spellcheck={false}
-                value={s.branch}
-                onInput={(e) => act({ branch: e.currentTarget.value })}
-              />
-            )}
-          </fieldset>
-          <fieldset class="choices">
-            <legend>Agent</legend>
+            <legend>Computer</legend>
             <div class="chips">
-              {[...agents, ...presets].map((a) => (
-                <label key={a.key} class={cls('choice', on(a.who) && 'on')}>
-                  <input type="radio" name="who" checked={on(a.who)} onClick={() => act({ who: a.who, chose: true })} />
-                  {a.label}
+              {able.map((x) => (
+                <label key={x.name} class={cls('choice', x === c && 'on')}>
+                  <input
+                    type="radio"
+                    name="computer"
+                    checked={x === c}
+                    onClick={() => {
+                      // Another computer starts from its own defaults, or
+                      // from the directory the link named on it.
+                      if (x === c) return set({ pinned: pin(x) })
+                      turned.current++
+                      const back = x === routed && linked
+                      set({
+                        pinned: pin(x),
+                        typed: back ? linked : null,
+                        opened: back ? false : null,
+                        who: null,
+                        chose: false,
+                        template: '',
+                        branch: null,
+                      })
+                      setError('')
+                      setStarted(null)
+                    }}
+                  />
+                  {title(x)}
                 </label>
               ))}
             </div>
-            {'template' in who && !lists && (
-              <input
-                class="field mono"
-                aria-label="Template"
-                placeholder="Its name, as @tmag-start-NAME names it"
-                autocapitalize="none"
-                spellcheck={false}
-                value={s.template}
-                onInput={(e) => act({ template: e.currentTarget.value })}
-              />
-            )}
           </fieldset>
-          <label class="choices">
-            <span class="legend">Prompt</span>
-            <textarea
-              class="field"
-              aria-label="Prompt"
-              rows={5}
-              placeholder="What it should work on. Optional: it waits for one otherwise."
-              value={text}
-              onInput={(e) => {
-                act()
-                startText.value = e.currentTarget.value
-                startEdits.value++
-              }}
-            />
-          </label>
-          {error && (
-            <p class="error" role="alert" ref={said}>
-              {error}
-              {madeAt && (
-                <>
-                  {' '}
-                  <a href={hash(madeAt)}>Open it</a>
-                </>
-              )}
-            </p>
+        )}
+        <fieldset class="choices">
+          <legend>Where</legend>
+          <DirPicker
+            key={instanceOf(c) ?? c.name}
+            c={c}
+            value={value}
+            onChange={(t) => act({ typed: t, opened: true })}
+            onChoose={(d) => {
+              if (!s.chose) set({ who: { agent: usual(c, d) } })
+            }}
+            open={open}
+            setOpen={(o) => act({ opened: o })}
+          />
+          {offered && (
+            <label class="check">
+              <input
+                type="checkbox"
+                checked={s.branch !== null}
+                onChange={(e) => act({ branch: e.currentTarget.checked ? '' : null })}
+              />
+              In a worktree of its own
+            </label>
           )}
-        </main>
+          {s.branch !== null && (
+            <input
+              class="field mono"
+              aria-label="Branch"
+              placeholder={`A branch${repo ? ` of ${where(dir, repo).name}` : ''}, new or not`}
+              autocapitalize="none"
+              autocomplete="off"
+              spellcheck={false}
+              value={s.branch}
+              onInput={(e) => act({ branch: e.currentTarget.value })}
+            />
+          )}
+        </fieldset>
+        <fieldset class="choices">
+          <legend>Agent</legend>
+          <div class="chips">
+            {[...agents, ...presets].map((a) => (
+              <label key={a.key} class={cls('choice', on(a.who) && 'on')}>
+                <input type="radio" name="who" checked={on(a.who)} onClick={() => act({ who: a.who, chose: true })} />
+                {a.label}
+              </label>
+            ))}
+          </div>
+          {'template' in who && !lists && (
+            <input
+              class="field mono"
+              aria-label="Template"
+              placeholder="Its name, as @tmag-start-NAME names it"
+              autocapitalize="none"
+              spellcheck={false}
+              value={s.template}
+              onInput={(e) => act({ template: e.currentTarget.value })}
+            />
+          )}
+        </fieldset>
+        <label class="choices">
+          <span class="legend">Prompt</span>
+          <textarea
+            class="field"
+            aria-label="Prompt"
+            rows={5}
+            placeholder="What it should work on. Optional: it waits for one otherwise."
+            value={text}
+            onInput={(e) => {
+              act()
+              startText.value = e.currentTarget.value
+              startEdits.value++
+            }}
+          />
+        </label>
+        {error && (
+          <p class="error" role="alert" ref={said}>
+            {error}
+            {madeAt && (
+              <>
+                {' '}
+                <a href={hash(madeAt)}>Open it</a>
+              </>
+            )}
+          </p>
+        )}
+      </main>
+      <Surface class="dock" layers="elevation acrylic">
         <div class="foot">
           <button class="primary wide" type="submit" disabled={busy || pending || checking}>
             {busy ? 'Starting…' : 'Start'}
           </button>
         </div>
-      </form>
-    </div>
+      </Surface>
+    </form>
   )
 }
 

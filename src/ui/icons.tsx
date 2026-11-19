@@ -1,6 +1,7 @@
-// The page's icons: strokes in the colour of the text around them, drawn
-// on a 24-unit grid, hidden from assistive technology, which reads the
-// label of what holds them.
+// The page's icons, in the manner of Segoe MDL2: thin strokes with square
+// ends and mitred corners, in the colour of the text around them, drawn on
+// a 24-unit grid, hidden from assistive technology, which reads the label of
+// what holds them.
 
 import type { ComponentChildren } from 'preact'
 
@@ -13,9 +14,9 @@ function Icon({ children, size = 20 }: { children: ComponentChildren; size?: num
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
+      stroke-width="1.5"
+      stroke-linecap="square"
+      stroke-linejoin="miter"
       aria-hidden="true"
     >
       {children}
@@ -24,42 +25,41 @@ function Icon({ children, size = 20 }: { children: ComponentChildren; size?: num
 }
 
 export const Back = () => (
-  <Icon size={24}>
-    <path d="M15 5l-7 7 7 7" />
+  <Icon>
+    <path d="M12 5.5L5.5 12l6.5 6.5M5.5 12h13" />
   </Icon>
 )
 export const Plus = () => (
   <Icon>
-    <path d="M12 5v14M5 12h14" />
+    <path d="M12 4v16M4 12h16" />
   </Icon>
 )
 export const Send = () => (
   <Icon>
-    <path d="M12 19V5M6 11l6-6 6 6" />
+    <path d="M3.5 4l17 8-17 8 2.5-8zM6 12h7" />
   </Icon>
 )
 export const Stop = () => (
   <Icon size={18}>
-    <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none" />
+    <rect x="6" y="6" width="12" height="12" fill="currentColor" stroke="none" />
   </Icon>
 )
 export const Computers = () => (
   <Icon>
-    <rect x="3" y="4" width="18" height="12" rx="2" />
-    <path d="M8 20h8M12 16v4" />
+    <path d="M3 4.5h18v11H3zM8 19.5h8M12 15.5v4" />
   </Icon>
 )
 export const Folder = () => (
   <Icon size={18}>
-    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <path d="M3 5.5h6l2 2h10v11H3z" />
   </Icon>
 )
 export const Branch = () => (
   <Icon size={14}>
-    <circle cx="6" cy="6" r="2" />
-    <circle cx="6" cy="18" r="2" />
-    <circle cx="18" cy="8" r="2" />
-    <path d="M6 8v8M18 10c0 4-6 3-11 6" />
+    <circle cx="6" cy="5.5" r="2" />
+    <circle cx="6" cy="18.5" r="2" />
+    <circle cx="18" cy="7.5" r="2" />
+    <path d="M6 7.5v9M18 9.5c0 4.5-6 3.5-11 7" />
   </Icon>
 )
 export const Next = () => (
@@ -69,12 +69,11 @@ export const Next = () => (
 )
 export const Up = () => (
   <Icon size={18}>
-    <path d="M12 19V5M5 12l7-7 7 7" />
+    <path d="M12 19.5V5M5.5 11.5L12 5l6.5 6.5" />
   </Icon>
 )
 export const Copy = () => (
   <Icon size={16}>
-    <rect x="8" y="8" width="12" height="12" rx="2" />
-    <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+    <path d="M8.5 8.5h11v11h-11zM15.5 8.5v-4h-11v11h4" />
   </Icon>
 )

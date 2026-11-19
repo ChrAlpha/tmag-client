@@ -4,10 +4,12 @@ import type { Session as S } from '../contract'
 import { hash } from '../route'
 import { computers, go, nextAfter, now, sections, title, whereIs } from '../store'
 import { agentName, ago, find, helpers, paneOf, shared, status, ties } from '../view'
+import { Navigation, Surface } from './axiom'
 import { Changes } from './Changes'
 import { Composer } from './Composer'
 import { cls } from './explain'
-import { Header } from './Header'
+import { useFrame } from './frame'
+import { Header, Round } from './Header'
 import { Branch, Next, Plus } from './icons'
 import { KeyBar } from './KeyBar'
 import { Requests } from './Requests'
@@ -43,6 +45,7 @@ export function Session({ c, id, request }: { c: Computer; id: string; request?:
   const showScreen = mode === 'screen'
   const gone = c.loaded.value && !s
   const [toast, say] = useToast()
+  const frame = useFrame()
 
   // What the session shows is read again whenever the watch reports it: the
   // view makes a new object of each session an event or a snapshot reports.
@@ -74,7 +77,7 @@ export function Session({ c, id, request }: { c: Computer; id: string; request?:
   const w = s && whereIs({ c, s })
   const place = w && [w.branch, w.sub].filter(Boolean).join(' · ')
   return (
-    <div class="screen session">
+    <div class="screen session" ref={frame}>
       <Header
         title={
           <>
@@ -106,24 +109,32 @@ export function Session({ c, id, request }: { c: Computer; id: string; request?:
           <>
             <Onward c={c} id={id} />
             {s?.cwd && c.can('start') && (
-              <a class="icon-button" href={hash({ name: 'start', at: c.name, dir: s.cwd })} aria-label="New agent here">
+              <Round href={hash({ name: 'start', at: c.name, dir: s.cwd })} label="New agent here">
                 <Plus />
-              </a>
+              </Round>
             )}
           </>
+        }
+        below={
+          modes.length > 1 &&
+          !gone &&
+          !ambiguous && (
+            <nav class="tabs" aria-label="Show">
+              <Navigation at={modes.indexOf(mode)}>
+                {modes.map((m) => (
+                  <ax-navigation-item key={m} default={m === mode}>
+                    <button class="tab" type="button" aria-pressed={m === mode} onClick={() => setMode(m)}>
+                      {named[m]}
+                    </button>
+                  </ax-navigation-item>
+                ))}
+              </Navigation>
+            </nav>
+          )
         }
       >
         {s && <Ties c={c} s={s} />}
       </Header>
-      {modes.length > 1 && !gone && !ambiguous && (
-        <nav class="tabs" aria-label="Show">
-          {modes.map((m) => (
-            <button key={m} class="tab" type="button" aria-pressed={m === mode} onClick={() => setMode(m)}>
-              {named[m]}
-            </button>
-          ))}
-        </nav>
-      )}
       <Scroller key={mode}>
         {ambiguous ? (
           <p class="empty">More than one agent runs a session by this id, and tmag names none of them by it.</p>
@@ -139,17 +150,21 @@ export function Session({ c, id, request }: { c: Computer; id: string; request?:
           <Turns c={c} id={id} s={s} say={say} />
         )}
       </Scroller>
-      {s && <Requests c={c} s={s} focus={request} say={say} folded={mode !== 'turns'} />}
-      <p class={cls('toast', toast.error && 'error')} role="status">
-        {toast.text}
-      </p>
-      {!gone &&
-        !ambiguous &&
-        (showScreen && c.can('keys') && c.screenOf(id).value.value?.screen ? (
-          <KeyBar c={c} target={id} say={say} />
-        ) : (
-          <Composer c={c} id={id} s={s} screen={showScreen} say={say} />
-        ))}
+      <Surface class="dock" layers="elevation acrylic">
+        <div class="dock-in">
+          {s && <Requests c={c} s={s} focus={request} say={say} folded={mode !== 'turns'} />}
+          <p class={cls('toast', toast.error && 'error')} role="status">
+            {toast.text}
+          </p>
+          {!gone &&
+            !ambiguous &&
+            (showScreen && c.can('keys') && c.screenOf(id).value.value?.screen ? (
+              <KeyBar c={c} target={id} say={say} />
+            ) : (
+              <Composer c={c} id={id} s={s} screen={showScreen} say={say} />
+            ))}
+        </div>
+      </Surface>
     </div>
   )
 }

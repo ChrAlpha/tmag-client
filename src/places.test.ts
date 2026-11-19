@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { expand, inside, snippet, tilde, where } from './places'
+import { apart, expand, inside, snippet, tilde, where } from './places'
 
 describe('where', () => {
   // A directory tmag names no repository for is a project of its own.
@@ -37,6 +37,111 @@ describe('paths', () => {
     expect(inside('/a/b', '/a')).toBe('b')
     expect(inside('/ab', '/a')).toBeUndefined()
     expect(inside('/a', '/')).toBe('a')
+  })
+
+  it('tells apart paths that name alike by the fewest of their last directories', () => {
+    expect(apart(['/work/customer-a/services/api', '/work/customer-b/services/api'])).toEqual([
+      '…/customer-a/services/api',
+      '…/customer-b/services/api',
+    ])
+    expect(apart(['~/work/api', '~/archive/api', '/srv/api'])).toEqual(['…/work/api', '…/archive/api', '/srv/api'])
+    expect(apart(['/api', '/x/api'])).toEqual(['/api', '/x/api'])
+    expect(apart(['/same/api', '/same/api'])).toEqual(['/same/api', '/same/api'])
+    expect(apart(['/x/east/api', '/x/west/api', '/y/east/api'])).toEqual(['/x/east/api', '…/west/api', '/y/east/api'])
+    expect(apart(['/one/api/customer-east-services', '/two/api/customer-west-services'])).toEqual([
+      '…/customer-east-services',
+      '…/customer-west-services',
+    ])
+  })
+
+  it('shows a long end by where it parts from each other path, and its end', () => {
+    expect(
+      apart([
+        '/work/customer-platform-integration-production-east/api',
+        '/work/customer-platform-integration-production-west/api',
+        '/work/dev/api',
+      ]),
+    ).toEqual(['…east/api', '…west/api', '…/dev/api'])
+    expect(
+      apart([
+        '/work/customer-america-east/api',
+        '/work/customer-america-west/api',
+        '/work/customer-european-east/api',
+        '/work/customer-european-west/api',
+      ]),
+    ).toEqual(['…america-east/api', '…america-west/api', '…european-east/api', '…european-west/api'])
+    expect(apart(['/w/customerplatformintegrationeast/api', '/w/customerplatformintegrationwest/api'])).toEqual([
+      '…grationeast/api',
+      '…grationwest/api',
+    ])
+    const x = 'x'.repeat(60)
+    expect(apart([`/work/customer-${x}a/api`, `/work/customer-${x}b/api`])).toEqual([
+      '…xxxxxxxxa/api',
+      '…xxxxxxxxb/api',
+    ])
+    expect(apart([`/w/a${x}east/api`, `/w/a${x}west/api`, `/w/b${x}east/api`, `/w/b${x}west/api`])).toEqual([
+      '…a…xxeast/api',
+      '…a…xxwest/api',
+      '…b…xxeast/api',
+      '…b…xxwest/api',
+    ])
+    expect(apart([`/${x}a/api`, `/${x}b/api`])).toEqual(['…xxxxxxxxa/api', '…xxxxxxxxb/api'])
+    expect(apart([`/${x}/api`, `/w/${x}/api`])).toEqual([`/${x}/api`, `/w/${x}/api`])
+    // Wide letters take two columns; a letter outside the basic plane is never cut in two.
+    expect(apart([`/w/${'界'.repeat(17)}東/api`, `/w/${'界'.repeat(17)}西/api`])).toEqual([
+      '…界界界界東/api',
+      '…界界界界西/api',
+    ])
+    expect(apart(['/w/customerplatformintegration📁/api', '/w/customerplatformintegration📂/api'])).toEqual([
+      '…egration📁/api',
+      '…egration📂/api',
+    ])
+  })
+
+  it('shows the few paths a computer names alike apart in the two dozen columns a tile shows', () => {
+    const pieces = [
+      'a',
+      'b',
+      'east',
+      'west',
+      'x'.repeat(30),
+      'x'.repeat(60),
+      'group-',
+      'api',
+      '-',
+      '📁',
+      '📂',
+      '界'.repeat(17),
+      '東',
+      '西',
+    ]
+    let seed = 11
+    const pick = (n: number) => {
+      seed = (seed + 0x6d2b79f5) | 0
+      let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+      return ((t ^ (t >>> 14)) >>> 0) % n
+    }
+    const name = () => Array.from({ length: 1 + pick(5) }, () => pieces[pick(pieces.length)]).join('')
+    const wide = (c: string) => (/[\u2e80-\ua4cf\uac00-\ud7a3]|\p{Extended_Pictographic}/u.test(c) ? 2 : 1)
+    const shown = (label: string) => {
+      let columns = 0
+      let out = ''
+      for (const c of label) {
+        columns += wide(c)
+        if (columns > 26) break
+        out += c
+      }
+      return out
+    }
+    for (let t = 0; t < 3000; t++) {
+      const paths = new Set<string>()
+      const n = 2 + pick(5)
+      for (let tries = 0; paths.size < n && tries < 50; tries++)
+        paths.add(`${pick(3) ? '/' : '~/'}${Array.from({ length: 1 + pick(3) }, name).join('/')}/api`)
+      const labels = apart([...paths])
+      expect(new Set(labels.map(shown)).size, [...paths].join(' ')).toBe(paths.size)
+    }
   })
 })
 

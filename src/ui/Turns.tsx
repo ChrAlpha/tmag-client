@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks'
 import type { Computer } from '../computer'
 import type { Prompt, Session as S } from '../contract'
 import { status, unwritten } from '../view'
+import { Surface } from './axiom'
 import { cls, explain } from './explain'
 import { Copy } from './icons'
 import { Markdown } from './Markdown'
@@ -75,7 +76,22 @@ export function Turns({ c, id, s, say }: { c: Computer; id: string; s: S | undef
   )
 }
 
-const Running = ({ s }: { s: S }) => <p class={`running ${s.state}`}>{status(s)}…</p>
+// Running is what a session does in the turn it runs: its progress, as
+// Windows Phone's dots, while it works.
+const Running = ({ s }: { s: S }) => (
+  <p class={`running ${s.state}`}>
+    {s.state === 'working' && (
+      <span class="dots" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+        <i />
+        <i />
+      </span>
+    )}
+    {status(s)}…
+  </p>
+)
 
 // Reply is what an agent answered, as Markdown, with a way to copy it as it
 // wrote it, where the browser lets the page write to the clipboard.
@@ -86,7 +102,7 @@ function Reply({ text, say }: { text: string; say: Say }) {
       <Markdown src={text} />
       {copies && (
         <button
-          class="icon-button small copy"
+          class="icon-button copy"
           type="button"
           aria-label="Copy the reply"
           onClick={() =>
@@ -104,20 +120,23 @@ function Reply({ text, say }: { text: string; say: Say }) {
 }
 
 // PromptText is a prompt of a turn, or one the page sent that no turn shows
-// yet.
+// yet, as a message with a tail: the person's from the right, another's,
+// an agent's or a task's, from the left.
 function PromptText({ p, sent = false }: { p: Prompt; sent?: boolean }) {
   const [open, setOpen] = useState(false)
   const long = p.text.length > 600 || p.text.split('\n').length > 12
   const who = sent ? 'sent' : p.from === 'peer' ? 'from an agent' : p.from === 'task' ? 'background task' : p.from
   return (
-    <div class={cls('prompt', p.from && 'from', sent && 'sent', long && !open && 'folded')}>
-      {who && <span class="who">{who}</span>}
-      {p.text || '(no text)'}
+    <Surface class={cls('prompt', p.from && 'from', sent && 'sent', long && !open && 'folded')} layers="fill">
+      <div class="text">
+        {who && <span class="who">{who}</span>}
+        {p.text || '(no text)'}
+      </div>
       {long && (
         <button class="more" type="button" onClick={() => setOpen(!open)}>
           {open ? 'Show less' : 'Show all'}
         </button>
       )}
-    </div>
+    </Surface>
   )
 }

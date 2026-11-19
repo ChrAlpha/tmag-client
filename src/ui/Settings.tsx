@@ -4,14 +4,16 @@ import { minimum } from '../contract'
 import { hash } from '../route'
 import { computers, forget, title } from '../store'
 import { cls, explain } from './explain'
+import { useFrame } from './frame'
 import { Header } from './Header'
 
 // Settings are the computers this device works with: how each answers, the
 // credential the device holds there, and the way to forget it; and the way
 // to add another.
 export function Settings() {
+  const frame = useFrame()
   return (
-    <div class="screen settings">
+    <div class="screen settings" ref={frame}>
       <Header title="Computers" />
       <main class="scroll">
         <ul class="computers">
@@ -50,7 +52,7 @@ function Machine({ c }: { c: Computer }) {
   return (
     <li class="computer">
       <div class="line1">
-        <span class={cls('dot', 'health', s.tone)} aria-hidden="true" />
+        <span class={cls('light', s.tone)} aria-hidden="true" />
         <span class="name">{title(c)}</span>
         <span class="meta mono">{c.name ? `/${c.name}/` : location.host}</span>
       </div>

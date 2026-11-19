@@ -3,6 +3,7 @@ import { Failure } from '../api'
 import { nameable, parse } from '../route'
 import { add, back, go, linked, named, notice } from '../store'
 import { explain } from './explain'
+import { useFrame } from './frame'
 import { Header } from './Header'
 import { useVisit } from './visit'
 
@@ -19,6 +20,7 @@ export function Pair({ adding = false }: { adding?: boolean }) {
   // and so does going on once it is paired: a pairing that ends after the
   // person left keeps its credential and moves them nowhere.
   const visit = useVisit()
+  const frame = useFrame()
   useEffect(
     () => () => {
       linked.value = null
@@ -58,7 +60,7 @@ export function Pair({ adding = false }: { adding?: boolean }) {
   }
 
   return (
-    <div class="screen pair">
+    <div class="screen pair" ref={frame}>
       <Header title={adding ? 'Add a computer' : 'Pair this device'} up={adding} />
       <main class="scroll">
         {notice.value && <p class="notice">{notice.value}</p>}

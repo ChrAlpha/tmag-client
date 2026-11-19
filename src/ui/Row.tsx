@@ -5,6 +5,7 @@ import { snippet } from '../places'
 import { hash } from '../route'
 import { computers, type Entry, needs, now, title, whereIs } from '../store'
 import { agentName, ago, can, helpers, status, ties, unwritten } from '../view'
+import { Lamp, native } from './axiom'
 import { cls, outcome } from './explain'
 import { Branch } from './icons'
 import { ask, asked, shown, whole } from './Requests'
@@ -52,27 +53,38 @@ export function Row({ e, in: inProject = false }: { e: Entry; in?: boolean }) {
   const request = s.state === 'blocked' ? s.requests.find((r) => !c.answered.value.has(r.id)) : undefined
   return (
     <li class={cls('row', s.state, waits && 'waits', waits && s.state === 'idle' && 'done')}>
-      <a class="row-link" href={hash({ name: 'session', at: c.name, id: s.id })}>
-        <span class="dot" aria-hidden="true" />
-        <span class="body">
-          <span class="line1">
-            <span class="name">{name}</span>
-            {place && (
-              <span class={cls('chip', w?.worktree && 'tree')}>
-                {w?.branch && (w.worktree || inProject) && <Branch />}
-                {place}
-              </span>
-            )}
-            <span class="when">{ago(s.since, now.value)}</span>
+      <ax-pressure class="row-press" onDragStartCapture={native}>
+        <Lamp />
+        <a class="row-link" href={hash({ name: 'session', at: c.name, id: s.id })}>
+          <span class="mark" aria-hidden="true">
+            {mark(s.agent)}
           </span>
-          <span class="meta">{meta.filter(Boolean).join(' · ')}</span>
-          {request ? <Asking c={c} s={s} r={request} /> : <Said c={c} s={s} full={waits} />}
-        </span>
-      </a>
+          <span class="body">
+            <span class="line1">
+              <span class="name">{name}</span>
+              {place && (
+                <span class={cls('chip', w?.worktree && 'tree')}>
+                  {w?.branch && (w.worktree || inProject) && <Branch />}
+                  {place}
+                </span>
+              )}
+              <span class="when">{ago(s.since, now.value)}</span>
+            </span>
+            <span class="meta">{meta.filter(Boolean).join(' · ')}</span>
+            {request ? <Asking c={c} s={s} r={request} /> : <Said c={c} s={s} full={waits} />}
+          </span>
+        </a>
+      </ax-pressure>
       {request && <Quick key={request.id} c={c} s={s} r={request} />}
     </li>
   )
 }
+
+// The letters of an agent on the square of its state, as a tile names an app.
+const marks: Record<string, string> = { claude: 'CC', codex: 'Cx', pi: 'Pi', omp: 'Op' }
+
+// mark is the letters of an agent: its own, or the first two of its name.
+const mark = (agent: string) => marks[agent] ?? agentName(agent).slice(0, 2)
 
 // current is the last turn read when it is the turn tmag reports the session
 // in, or tmag names none: a list never shows an older turn's answer as the

@@ -3,6 +3,7 @@ import { minimum } from '../contract'
 import { hash } from '../route'
 import { computers, holding, later, linked, named, notice, route, title } from '../store'
 import { explain } from './explain'
+import { useFrame } from './frame'
 import { Header } from './Header'
 import { Home } from './Home'
 import { Pair } from './Pair'
@@ -104,8 +105,9 @@ function Later() {
 // Nameless is a link to a computer that does not say which computer it is,
 // of which the page shows nothing.
 function Nameless({ c }: { c: Computer }) {
+  const frame = useFrame()
   return (
-    <div class="screen session">
+    <div class="screen session" ref={frame}>
       <Header title={title(c)} />
       <main class="scroll">
         <p class="empty">{c.problem.value ? explain(c.problem.value) : 'Asking the computer which it is…'}</p>
@@ -117,8 +119,9 @@ function Nameless({ c }: { c: Computer }) {
 // Missing is a link to a computer the page does not work with.
 function Missing({ name }: { name: string }) {
   const which = name ? `a computer named ${name}` : `the computer at ${location.host}`
+  const frame = useFrame()
   return (
-    <div class="screen session">
+    <div class="screen session" ref={frame}>
       <Header title={name || location.host} />
       <main class="scroll">
         <p class="empty">
